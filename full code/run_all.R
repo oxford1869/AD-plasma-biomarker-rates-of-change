@@ -9,7 +9,7 @@
 #         bootstrap in 07 and the power simulation in 08. The ADNI bootstraps in 09 save every draw
 #         and resume if interrupted; the A4/LEARN one in 07 does not.
 # N_BOOT  bootstrap draws for 07 (A4/LEARN) and 09 (ADNI); the paper uses 1,000, the default.
-#         N_BOOT = 0 skips the resampling in 07 and in section 1 of 09; the later sections of 09,
+#         N_BOOT = 0 skips the resampling in 07 and in sections 1 and 11 of 09; the later sections of 09,
 #         and 10 and 11, need the saved draws, so a run without a bootstrap should set STEPS to
 #         "01" to "08".
 # Paths   set ADNI_JM_DIR, ADNI_OUT_DIR and A4_DIR with Sys.setenv() before sourcing, or edit the

@@ -8,6 +8,7 @@
 #      spread of sampling times (T17) (formerly 08b6 sections 12 to 14)
 #   2. trial sizes and spans for the mean of platforms under the upper and lower bound (R2; formerly 08b17 R2)
 #   3. trial sizes on amyloid-positive variance components (R3; formerly 08b17 R3)
+#   4. validity by SST fifth allowing for the precision of both the plasma and the Centiloid slope (R14b)
 # =============================================================================================
 
 
@@ -406,3 +407,83 @@ print(as.data.frame(R3 %>% filter(biomarker == "pTau217", effect == 0.25,
                       mutate(reliability_of_trial_slope = round(reliability_of_trial_slope, 3))))
 out(R3, "R3a_trial_amyloid_positive_variance")
 
+
+
+# =============================================================================================
+# Section 4. Validity by SST fifth allowing for the precision of both slopes (R14b)
+# Added November 2026. Section 1 (T17) predicts the ratio of the lowest to the highest SST fifth in
+# validity against Centiloid change from plasma reliability alone (0.67 in the text). The text also gives
+# the ratio when the Centiloid slope is allowed to carry measurement error too (0.45): Centiloid slope
+# reliability comes from a random-slope model of Centiloid in the criterion window (plasma span +/- 180 days,
+# as in 03), at each fifth's median Centiloid SST, from each participant's own scan times and, as a check,
+# from evenly spaced scans at the fifth's median number of scans and span.
+# =============================================================================================
+Sys.setenv(COHORT = "adni"); source("00_setup.R")
+suppressPackageStartupMessages(library(lme4))
+P2_DIR <- file.path(OUT_DIR, "paper2")
+say("\n== Section 4. Validity by SST fifth, attenuation of both slopes (R14b) ==")
+long   <- readRDS(file.path(OUT_DIR, "frame_paper2_long.rds")) %>%
+  mutate(arm = case_when(measure == "C2N_plasma_ptau217_ratio" ~ "C2N_ratio", TRUE ~ platform))
+slopes <- readRDS(file.path(OUT_DIR, "frame_paper2_slopes.rds")) %>%
+  mutate(arm = case_when(measure == "C2N_plasma_ptau217_ratio" ~ "C2N_ratio", TRUE ~ platform))
+critr  <- readRDS(file.path(OUT_DIR, "frame_paper2_criteria.rds"))
+T2  <- read_csv(file.path(P2_DIR, "T2_change_variance_components.csv"), show_col_types = FALSE)
+T17 <- read_csv(file.path(P2_DIR, "T17_validity_by_sst.csv"), show_col_types = FALSE)
+
+# the fifths exactly as T17 (section 1, item 14), one row per person and platform
+sst_person <- long %>% distinct(RID, plasma_time) %>% group_by(RID) %>%
+  summarise(k = n(), span = max(plasma_time) - min(plasma_time),
+            sst = sum((plasma_time - mean(plasma_time))^2), .groups = "drop")
+bands <- slopes %>% filter(n_obs >= 2) %>% select(RID, biomarker, arm, slope) %>%
+  left_join(sst_person %>% select(RID, k, span, sst), by = "RID") %>%
+  left_join(critr %>% select(RID, centiloid_slope, centiloid_n, centiloid_span), by = "RID") %>%
+  filter(!is.na(slope), !is.na(centiloid_slope), !is.na(sst)) %>%
+  group_by(biomarker) %>% mutate(band = ntile(sst, 5)) %>% ungroup() %>%
+  filter(biomarker == "pTau217")
+obs_r <- bands %>% group_by(band) %>%
+  summarise(r = cor(slope, centiloid_slope, method = "spearman"), .groups = "drop")
+
+# Centiloid scans in the criterion window, as in 03 section 3
+part_w <- readRDS(file.path(OUT_DIR, "participants.rds")) %>% select(RID, first_plasma, last_plasma)
+cl <- readRDS(file.path(OUT_DIR, "criteria_long.rds")) %>% filter(measure == "centiloid", !is.na(value)) %>%
+  inner_join(part_w, by = "RID") %>%
+  filter(exam_date >= first_plasma - CRITERION_SLOPE_PAD_DAYS, exam_date <= last_plasma + CRITERION_SLOPE_PAD_DAYS) %>%
+  mutate(t = as.numeric(exam_date - first_plasma) / YEAR_DAYS) %>%
+  filter(RID %in% unique(bands$RID))
+cl_person <- cl %>% group_by(RID) %>%
+  summarise(n_scans = n(), span_c = max(t) - min(t), sst_c = sum((t - mean(t))^2), .groups = "drop")
+cl_fit <- lmer(value ~ t + (1 + t | RID), data = cl %>% filter(RID %in% cl_person$RID[cl_person$n_scans >= 2]),
+               REML = TRUE, control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5)))
+vc_c <- as.data.frame(VarCorr(cl_fit))
+v_slope_c <- vc_c$vcov[vc_c$grp == "RID" & vc_c$var1 == "t" & is.na(vc_c$var2)]
+v_res_c   <- vc_c$vcov[vc_c$grp == "Residual"]
+say("Centiloid model: true slope variance %.3f, residual variance %.3f, singular %s",
+    v_slope_c, v_res_c, isSingular(cl_fit))
+
+pT <- T2 %>% filter(biomarker == "pTau217"); stopifnot(nrow(pT) == 1)
+rel_of   <- function(vs, vr, sst) vs / (vs + vr / sst)
+even_sst <- function(k, s) ifelse(k >= 2, s^2 * k * (k + 1) / (12 * (k - 1)), NA_real_)
+by_band <- bands %>% select(RID, band, sst) %>% left_join(cl_person, by = "RID") %>%
+  group_by(band) %>%
+  summarise(sst_median = median(sst), n_scans_median = median(n_scans, na.rm = TRUE),
+            span_c_median = median(span_c, na.rm = TRUE), sst_c_median = median(sst_c, na.rm = TRUE), .groups = "drop") %>%
+  mutate(rel_plasma = rel_of(pT$var_person_slope, pT$var_residual, sst_median),
+         rel_cl_own = rel_of(v_slope_c, v_res_c, sst_c_median),
+         rel_cl_even = rel_of(v_slope_c, v_res_c, even_sst(n_scans_median, span_c_median))) %>%
+  left_join(obs_r, by = "band") %>%
+  left_join(T17 %>% filter(biomarker == "pTau217") %>% select(band, r_T17 = r_centiloid_spearman), by = "band")
+print(as.data.frame(by_band %>% mutate(across(where(is.numeric), ~ round(.x, 3)))))
+lo <- by_band %>% filter(band == 1); hi <- by_band %>% filter(band == 5)
+plasma_only <- sqrt(lo$rel_plasma / hi$rel_plasma)
+R14b <- tibble(
+  quantity = c("observed validity ratio, lowest / highest SST fifth", "predicted ratio, plasma reliability only",
+               "predicted ratio, both slopes, own Centiloid scan times", "predicted ratio, both slopes, evenly spaced Centiloid scans",
+               "lowest fifth, median Centiloid scans", "lowest fifth, median Centiloid span (y)",
+               "highest fifth, median Centiloid scans", "highest fifth, median Centiloid span (y)",
+               "Centiloid model true slope variance", "Centiloid model residual variance"),
+  value = c(lo$r / hi$r, plasma_only,
+            plasma_only * sqrt(lo$rel_cl_own / hi$rel_cl_own), plasma_only * sqrt(lo$rel_cl_even / hi$rel_cl_even),
+            lo$n_scans_median, lo$span_c_median, hi$n_scans_median, hi$span_c_median, v_slope_c, v_res_c))
+print(as.data.frame(R14b %>% mutate(value = round(value, 3))))
+write_csv(R14b, file.path(P2_DIR, "R14b_validity_attenuation_both_slopes.csv"))
+say("Written: R14b_validity_attenuation_both_slopes.csv in %s", P2_DIR)

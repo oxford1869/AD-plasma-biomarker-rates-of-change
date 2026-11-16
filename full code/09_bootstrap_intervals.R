@@ -3,8 +3,8 @@
 # The participant bootstrap and every interval and paired comparison derived from it.
 #
 # ADNI (the A4/LEARN bootstrap is in 07, section 1). 1,000 participant resamples (seed 20260904 + draw), saved
-# draw by draw and resumed if interrupted. N_BOOT = 0 skips the resampling in section 1 only; sections 3 to 6
-# and 10 need the saved draws, so a test run without a bootstrap should stop at STEPS 08. Sections:
+# draw by draw and resumed if interrupted. N_BOOT = 0 skips the resampling in sections 1 and 11; sections 3 to 6
+# and 8 to 10 need the saved draws, so a test run without a bootstrap should stop at STEPS 08. Sections:
 #   1. likelihood-ratio test of the platform-specific slope variance (T2d), residual diagnostics (T2e, T2f, F4), and
 #      the bootstrap of the G coefficients, reliabilities, slope ICCs and validity correlations (T7) (formerly 08b2)
 #   2. intervals for the minimal detectable change, years to exceed it and trial sample sizes (T3b, T15b; formerly 08b16)
@@ -17,9 +17,14 @@
 #      formerly p2_amyloid_interval)
 #   7. observed-data validity of the pooled slope by amyloid group and Pearson versions of the design-test
 #      correlations, both cohorts (T7c, T17p; A4 T8p, T8bp; formerly p2_observed_checks)
-#   8. the paired intervals quoted in the text and in Table S25, computed within the saved draws: averaging gain,
+#   8. the paired intervals quoted in the text and in Table S26, computed within the saved draws: averaging gain,
 #      between-biomarker and amyloid-group differences (R13a), platform differences in CV, MDC and years to exceed
 #      (R13b), and the shares of singular sample-model fits (R13c)
+#   9. the reduction in trial size from five rather than three samples over 24 months, from the section 3 draws (R15a)
+#  10. the pooled minus single-platform pTau217 validity against Centiloid change, paired within the section 1
+#      resamples (R15b)
+#  11. intervals for the whole-cohort trial sizes of the pTau217 mean of platforms under the lower bound, from the
+#      same resamples refitted (R17)
 # =============================================================================================
 
 
@@ -51,7 +56,7 @@
 
 Sys.setenv(COHORT = "adni"); source("00_setup.R")
 suppressPackageStartupMessages({ library(lme4); library(ggplot2); library(tidyr) })
-# the shared palette and theme, so Supplementary Figure S3 matches the rest of the set
+# the shared palette and theme, so Supplementary Figure S5 matches the rest of the set
 if (!exists("GRID")) GRID <- "#e6e3dc"
 
 N_BOOT   <- as.integer(Sys.getenv("N_BOOT", unset = "1000"))   # the paper uses 1,000 draws; 0 runs the checks only
@@ -132,7 +137,7 @@ dev.off()
 res_all <- bind_rows(res_rows)
 out(res_all, "T2f_residuals")
 
-# The ten-page PDF above stays as an internal check. Supplementary Figure S3 is this single
+# The ten-page PDF above stays as an internal check. Supplementary Figure S5 is this single
 # styled page: residuals against the fitted value and against time, one column per biomarker.
 {
   BM  <- c(pTau217 = "pTau217", pTau181 = "pTau181", GFAP = "GFAP", NfL = "NfL", Ab42_40 = "Ab42/40")
@@ -159,11 +164,11 @@ out(res_all, "T2f_residuals")
          subtitle = sprintf(paste("Points are single measurements; lines are loess fits within a platform.",
                                   "%d of %d residuals fall outside the axis."), n_out, nrow(res_all))) +
     theme(legend.position = "bottom", strip.text = element_text(lineheight = 1.1))
-  fS3 <- file.path(P2_DIR, "figures", "supplementary", "FigureS3_residual_diagnostics")
+  fS3 <- file.path(P2_DIR, "figures", "supplementary", "FigureS5_residual_diagnostics")
   dir.create(dirname(fS3), showWarnings = FALSE, recursive = TRUE)
   ggsave(paste0(fS3, ".png"), pS3, width = 11, height = 6, dpi = 300, bg = "white")
   ggsave(paste0(fS3, ".pdf"), pS3, width = 11, height = 6, device = "pdf", useDingbats = FALSE, bg = "white")
-  say("  Supplementary Figure S3 written to %s.png", fS3)
+  say("  Supplementary Figure S5 written to %s.png", fS3)
 }
 
 diag_tab <- bind_rows(diag_rows) %>% select(biomarker, facet, level, sd_res, n)
@@ -177,7 +182,7 @@ if (N_BOOT > 0) {
   crit_cols <- crit_cols[crit_cols %in% names(critr)]
   # Signs oriented as in T5 (04, section 1): hippocampal volume, mPACC and MMSE fall as disease
   # progresses, so their correlations are reversed and a positive value always means the plasma
-  # slope tracks worsening. Added November 2026 with mPACC, so that every criterion in Figure S4
+  # slope tracks worsening. Added November 2026 with mPACC, so that every criterion in Figure S6
   # has an interval and the intervals carry the same sign as the point estimates.
   FLIP <- c("hcv_adj_slope", "mpacc_digit_slope", "mmse_slope")
   f_boot <- if (USE_REDUCED) f_red else f_full
@@ -559,7 +564,7 @@ if (RUN_BOOT) {
 #   B1  pTau217 lower bound of averaging (model with a person-by-sample effect, whole cohort):
 #       reliability of one platform and of the mean of platforms with the shared part kept,
 #       and the sampling span needed for the mean of platforms to reach 0.7, 0.8 and 0.9
-#       (Table S9b, lower-bound column). pTau217 only: for the other biomarkers the sample
+#       (Table S16b, lower-bound column). pTau217 only: for the other biomarkers the sample
 #       model is not identifiable (08b17 R1).
 #   B2  Reliability of each of the 15 measures fitted alone (08b17 R4), at the ADNI median
 #       SST and at the A4 placebo SST.
@@ -823,7 +828,7 @@ say("\n08b19 finished %s. Intervals in %s", format(Sys.time()), file.path(REV_DI
 # =============================================================================
 # 08b20_paper2_span_intervals.R
 # Paper 2, November 2026 revision: bootstrap intervals for the sampling span needed to reach
-# a target reliability (Table S9b, one-platform and upper-bound columns), derived from the
+# a target reliability (Table S16b, one-platform and upper-bound columns), derived from the
 # saved draws of the main bootstrap (08b2, pipeline_out/paper2/bootstrap_draws.rds).
 #
 # No refitting. The span formula of 08b6 depends on the variance components only through the
@@ -1038,7 +1043,7 @@ say("\n08b21 finished %s", format(Sys.time()))
 # p2_amyloid_interval.R                                                   Paper 2
 # Prints the 95% percentile interval, to three decimals, of the amyloid-positive minus
 # amyloid-negative difference in pTau217 validity against Centiloid change, computed within
-# each of the saved bootstrap draws (the same construction as Supplementary Table S25).
+# each of the saved bootstrap draws (the same construction as Supplementary Table S26).
 # Reads pipeline_out/paper2/bootstrap_draws.rds; writes nothing.
 suppressPackageStartupMessages({ library(dplyr); library(tidyr) })
 Sys.setenv(COHORT = "adni"); source("00_setup.R")
@@ -1050,14 +1055,14 @@ d <- readRDS(f) %>%
 q <- quantile(d$diff, c(0.025, 0.975), na.rm = TRUE)
 cat(sprintf("Draws used: %d\n", sum(!is.na(d$diff))))
 cat(sprintf("95%% interval, three decimals: %.3f to %.3f\n", q[1], q[2]))
-cat(sprintf("Check, two decimals (Table S25 shows -0.42 to -0.03): %.2f to %.2f\n", q[1], q[2]))
+cat(sprintf("Check, two decimals (Table S26 shows -0.42 to -0.03): %.2f to %.2f\n", q[1], q[2]))
 
 
 # =============================================================================================
 # Section 8. Paired intervals from the saved draws (R13a, R13b, R13c)
 # Added November 2026
 # =============================================================================================
-# The comparisons quoted in the text and in Supplementary Table S25 were computed within the saved
+# The comparisons quoted in the text and in Supplementary Table S26 were computed within the saved
 # draws and until now only printed. This section writes them, so that every interval in the paper
 # has a file: R13a from the main bootstrap (section 1), R13b from the MDC bootstrap (section 2),
 # R13c the shares of singular sample-model fits in the R10 bootstrap (section 3). Draw 0, where
@@ -1159,9 +1164,9 @@ print(as.data.frame(R13c))
 #      as in the bootstrap of 08b2 (change model refitted within each group, Spearman
 #      correlation of the pooled slope with each reference measure; Pearson added).
 #      Writes pipeline_out/paper2/T7c_observed_by_amyloid.csv
-#   2. ADNI, Table S14 (T17, validity by SST quintile) with Pearson beside Spearman.
+#   2. ADNI, Table S24 (T17, validity by SST quintile) with Pearson beside Spearman.
 #      Writes pipeline_out/paper2/T17p_validity_by_sst_pearson.csv
-#   3. A4/LEARN, Tables S13a (T8) and S13b (T8b) with Pearson beside Spearman.
+#   3. A4/LEARN, Tables S23b (T8) and S23c (T8b) with Pearson beside Spearman.
 #      Writes a4learn_out/paper2/T8p_design_subsets_pearson.csv and
 #             a4learn_out/paper2/T8bp_validity_by_sst_pearson.csv
 #
@@ -1296,3 +1301,235 @@ cat("\nA4 design test, Spearman against Pearson ratios:\n")
 print(as.data.frame(T8p %>% select(sample, subset, ratio_spearman, ratio_pearson, sqrt_reliability_ratio) %>% mutate(across(where(is.numeric), ~ round(.x, 2)))))
 cat("\nDone. Four files written; no existing file was changed.\n")
 Sys.setenv(COHORT = "adni")
+
+
+# =============================================================================================
+# Section 9. Five against three samples over 24 months, amyloid-positive components (R15a)
+# Added November 2026. The percentage reduction in participants per arm when a 24-month trial takes five
+# samples instead of three (25% slowing), per pTau217 measure and for the mean of platforms under both
+# bounds, with percentile intervals from the section 3 draws (R10_bootstrap_draws.rds). Point estimates are
+# from R3a (06, section 3). Nothing is refitted.
+# =============================================================================================
+Sys.setenv(COHORT = "adni"); source("00_setup.R")
+suppressPackageStartupMessages({ library(lme4); library(tidyr) })
+P2_DIR <- file.path(OUT_DIR, "paper2")
+need <- file.path(P2_DIR, c("R10_bootstrap_draws.rds", "bootstrap_draws.rds"))
+if (!all(file.exists(need))) stop("Sections 9 and 10 need the saved bootstrap draws (",
+  paste(basename(need[!file.exists(need)]), collapse = ", "), "); run sections 1 and 3 with N_BOOT > 0 first.")
+ci95 <- function(x) quantile(x, c(0.025, 0.975), na.rm = TRUE, names = FALSE)
+say("\n== Section 9. Five against three samples over 24 months (R15a) ==")
+S3 <- "24 months, 3 draws (0, 12, 24 m)"
+S5 <- "24 months, 5 draws (0, 6, 12, 18, 24 m)"
+r10 <- readRDS(file.path(P2_DIR, "R10_bootstrap_draws.rds")) %>%
+  filter(quantity == "B3_n_per_arm_amy_pos", biomarker == "pTau217",
+         abs(as.numeric(effect) - 0.25) < 1e-9, schedule %in% c(S3, S5)) %>%
+  select(draw, arm, schedule, value) %>%
+  distinct(draw, arm, schedule, .keep_all = TRUE) %>%
+  pivot_wider(names_from = schedule, values_from = value) %>%
+  mutate(reduction_pct = 100 * (1 - .data[[S5]] / .data[[S3]]))
+r3a <- read_csv(file.path(P2_DIR, "R3a_trial_amyloid_positive_variance.csv"), show_col_types = FALSE) %>%
+  filter(biomarker == "pTau217", abs(as.numeric(effect) - 0.25) < 1e-9, schedule %in% c(S3, S5)) %>%
+  mutate(arm = case_when(bound == "per platform" ~ arm,
+                         grepl("^upper", bound) ~ "mean of platforms upper",
+                         grepl("^lower", bound) ~ "mean of platforms lower")) %>%
+  select(arm, schedule, n = n_per_arm_slope_amy_pos_variance) %>%
+  pivot_wider(names_from = schedule, values_from = n) %>%
+  mutate(estimate = 100 * (1 - .data[[S5]] / .data[[S3]]))
+R15a <- r10 %>% filter(draw > 0) %>% group_by(arm) %>%
+  summarise(n_draws = sum(!is.na(reduction_pct)), lo95 = ci95(reduction_pct)[1], hi95 = ci95(reduction_pct)[2],
+            .groups = "drop") %>%
+  left_join(r3a %>% select(arm, n_three = all_of(S3), n_five = all_of(S5), estimate), by = "arm") %>%
+  select(arm, n_three, n_five, estimate, lo95, hi95, n_draws)
+print(as.data.frame(R15a %>% mutate(across(where(is.numeric), ~ round(.x, 1)))))
+write_csv(R15a, file.path(P2_DIR, "R15a_five_against_three_samples.csv"))
+say("Written: R15a_five_against_three_samples.csv in %s", P2_DIR)
+
+
+# =============================================================================================
+# Section 10. Pooled minus single-platform pTau217 validity against Centiloid change (R15b)
+# Added November 2026. The pooled value of each draw is read from the section 1 cache (bootstrap_draws.rds);
+# the single-platform value is recomputed on the same resample, rebuilt from the same seed (20260904 + draw)
+# and the same participant list. Draws 1 to 3 are first checked against the cached slope ICC, and the section
+# stops if they do not match, since the intervals would then not be paired.
+# =============================================================================================
+say("\n== Section 10. Pooled minus single pTau217 platform, validity against Centiloid (R15b) ==")
+BOOT_SEED <- 20260904
+long_b <- readRDS(file.path(OUT_DIR, "frame_paper2_long.rds")) %>%
+  mutate(arm = case_when(measure == "C2N_plasma_ptau217_ratio" ~ "C2N_ratio", TRUE ~ platform))
+rids_b <- unique(long_b$RID)                  # the participant list section 1 samples from
+slopes_b <- readRDS(file.path(OUT_DIR, "frame_paper2_slopes.rds")) %>%
+  mutate(arm = case_when(measure == "C2N_plasma_ptau217_ratio" ~ "C2N_ratio", TRUE ~ platform)) %>%
+  filter(biomarker == "pTau217") %>% select(RID, arm, slope)
+critr_b <- readRDS(file.path(OUT_DIR, "frame_paper2_criteria.rds")) %>% select(RID, centiloid_slope)
+T5_b <- read_csv(file.path(P2_DIR, "T5_validity_vs_criterion_change.csv"), show_col_types = FALSE) %>%
+  filter(biomarker == "pTau217", criterion == "centiloid_slope")
+cache_b <- readRDS(file.path(P2_DIR, "bootstrap_draws.rds"))
+pooled_b <- cache_b %>% filter(biomarker == "pTau217", subset == "all", quantity == "validity_centiloid_slope") %>%
+  distinct(draw, .keep_all = TRUE) %>% select(draw, pooled = value)
+single_validity <- function(picked) {
+  tibble(RID = picked) %>%
+    inner_join(slopes_b, by = "RID", relationship = "many-to-many") %>%
+    left_join(critr_b, by = "RID") %>%
+    group_by(arm) %>%
+    summarise(r = cor(slope, centiloid_slope, use = "complete.obs", method = "spearman"), .groups = "drop")
+}
+obs_single <- single_validity(unique(slopes_b$RID)) %>%
+  left_join(T5_b %>% filter(estimate == "single measure") %>% select(arm, r_T5 = r), by = "arm")
+print(as.data.frame(obs_single %>% mutate(r = round(r, 3))))
+
+ctrl_b <- lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5), calc.derivs = FALSE)
+icc_cache <- cache_b %>% filter(biomarker == "pTau217", quantity == "icc_single_arm") %>%
+  distinct(draw, .keep_all = TRUE) %>% select(draw, icc_cache = value)
+pair_chk <- lapply(1:3, function(b) {
+  set.seed(BOOT_SEED + b)
+  picked <- sample(rids_b, length(rids_b), replace = TRUE)
+  boot_ids <- tibble(RID = picked, boot_id = seq_along(picked))
+  d <- long_b %>% filter(biomarker == "pTau217") %>%
+    inner_join(boot_ids, by = "RID", relationship = "many-to-many")
+  sl <- slope_by(d, "z_log_aligned", "plasma_time", boot_id, arm) %>% select(boot_id, arm, slope) %>%
+    pivot_wider(names_from = arm, values_from = slope)
+  mc <- sl[complete.cases(sl), -1]
+  dd <- mc %>% mutate(id = row_number()) %>% pivot_longer(-id, names_to = "arm", values_to = "s")
+  fi <- lmer(s ~ 1 + (1|id) + (1|arm), data = dd, control = ctrl_b)
+  v <- as.data.frame(VarCorr(fi))
+  tibble(draw = b, icc_rebuilt = v$vcov[v$grp == "id"] / sum(v$vcov))
+}) %>% bind_rows() %>% left_join(icc_cache, by = "draw")
+print(as.data.frame(pair_chk %>% mutate(across(starts_with("icc"), ~ round(.x, 4)))))
+if (any(abs(pair_chk$icc_rebuilt - pair_chk$icc_cache) > 1e-4, na.rm = TRUE) || anyNA(pair_chk$icc_cache))
+  stop("Section 10: the rebuilt resamples do not match the cached draws, so the intervals would not be paired.")
+
+draws_b <- lapply(pooled_b$draw[pooled_b$draw > 0], function(b) {
+  set.seed(BOOT_SEED + b)
+  picked <- sample(rids_b, length(rids_b), replace = TRUE)
+  single_validity(picked) %>% mutate(draw = b)
+}) %>% bind_rows() %>% left_join(pooled_b, by = "draw") %>% mutate(diff = pooled - r)
+obs_pooled <- T5_b %>% filter(estimate == "pooled") %>% pull(r)
+R15b <- draws_b %>% group_by(arm) %>%
+  summarise(n_draws = sum(!is.na(diff)), lo95 = ci95(diff)[1], hi95 = ci95(diff)[2], .groups = "drop") %>%
+  left_join(obs_single %>% select(arm, single = r_T5), by = "arm") %>%
+  mutate(pooled = obs_pooled, estimate = pooled - single) %>%
+  select(arm, pooled, single, estimate, lo95, hi95, n_draws)
+print(as.data.frame(R15b %>% mutate(across(where(is.numeric), ~ round(.x, 3)))))
+write_csv(R15b, file.path(P2_DIR, "R15b_pooled_minus_single_validity.csv"))
+say("Written: R15b_pooled_minus_single_validity.csv in %s", P2_DIR)
+
+
+# =============================================================================================
+# Section 11. Trial sizes on whole-cohort components, mean of platforms, lower bound (R17)
+# Added November 2026. The whole-cohort sensitivity column of the trial-size table gives the pTau217 mean of
+# platforms under the lower bound (R2a, 06 section 2); this section adds its intervals. Per draw (the same
+# participant resamples and seeds as section 3): the pTau217 sample model on the whole cohort (true slope,
+# shared occasion and assay-specific variance), the mean amyloid-positive rate (mean over the five measures
+# of the mean least-squares slope in amyloid-positive participants with three or more samples), and
+# n per arm = ceiling(2 (z0.975 + z0.80)^2 v / (effect x |rate|)^2), v = var(true slope) +
+# (var(shared) + var(assay-specific)/5) / SST of the schedule. Draw 0 must reproduce R2a. Saved every 10 draws
+# and resumed if interrupted. Writes R17_trial_lower_bound_whole_cohort.csv.
+# =============================================================================================
+Sys.setenv(COHORT = "adni"); source("00_setup.R")
+if (COHORT != "adni") stop("COHORT must be 'adni'.")
+suppressPackageStartupMessages(library(lme4))
+
+REV_DIR    <- file.path(OUT_ROOT, "pipeline_out", "paper2")   # the R tables sit with the T tables
+draws_file <- file.path(REV_DIR, "R17_trial_lower_bound_whole_cohort_draws.rds")
+N_BOOT     <- as.integer(Sys.getenv("N_BOOT", unset = "1000"))
+BOOT_SEED  <- 20260904
+YVAR       <- "z_log_aligned"
+zsum2      <- (qnorm(0.975) + qnorm(0.80))^2
+ctrl       <- lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))
+
+long_all <- readRDS(file.path(OUT_DIR, "frame_paper2_long.rds"))
+rids <- unique(long_all$RID)          # same participant list and order as 09, so draws pair
+long <- long_all %>%
+  mutate(arm = case_when(measure == "C2N_plasma_ptau217_ratio" ~ "C2N_ratio", TRUE ~ platform),
+         batch_f = factor(batch)) %>%
+  filter(biomarker == "pTau217")
+k_platforms <- n_distinct(long$arm)
+stopifnot(k_platforms == 5)
+
+designs <- tibble(schedule = c("18 months, 4 draws (0, 6, 12, 18 m)",
+                               "24 months, 3 draws (0, 12, 24 m)",
+                               "24 months, 5 draws (0, 6, 12, 18, 24 m)"),
+                  sst = c(sum((c(0, 0.5, 1, 1.5) - 0.75)^2),
+                          sum((c(0, 1, 2) - 1)^2),
+                          sum((c(0, 0.5, 1, 1.5, 2) - 1)^2)))
+effects <- c(0.25, 0.50)
+
+f_sample <- as.formula(paste(YVAR, "~ arm_f * plasma_time + (1 + plasma_time | RID_f) +",
+                             "(1 | RID_f:arm_f) + (1 | sample_f) + (1 | batch_f)"))
+vget <- function(fit, grp, var1 = NA) {
+  vc <- as.data.frame(VarCorr(fit)) %>% filter(is.na(var2))
+  i <- if (is.na(var1)) which(vc$grp == grp) else which(vc$grp == grp & !is.na(vc$var1) & vc$var1 == var1)
+  if (length(i)) vc$vcov[i[1]] else NA_real_
+}
+
+one_draw <- function(b) {
+  boot_ids <- if (b == 0) tibble(RID = rids, boot_id = seq_along(rids)) else {
+    set.seed(BOOT_SEED + b)
+    picked <- sample(rids, length(rids), replace = TRUE)
+    tibble(RID = picked, boot_id = seq_along(picked))
+  }
+  d <- long %>% inner_join(boot_ids, by = "RID", relationship = "many-to-many") %>%
+    mutate(RID_f = factor(boot_id), sample_f = factor(paste(boot_id, visit_no)),
+           arm_f = droplevels(factor(arm)))
+  fs <- tryCatch(suppressMessages(lmer(f_sample, data = d, REML = TRUE, control = ctrl)),
+                 error = function(e) NULL)
+  if (is.null(fs)) return(NULL)
+  vt <- vget(fs, "RID_f", "plasma_time"); vsh <- vget(fs, "sample_f"); va <- vget(fs, "Residual")
+  # mean amyloid-positive rate: per-measure mean OLS slope (>= 3 samples), averaged over measures
+  m <- d %>% group_by(boot_id, arm) %>%
+    filter(n() >= 3, sd(plasma_time) > 0) %>%
+    summarise(slope = cov(plasma_time, z_log_aligned) / var(plasma_time),
+              amy = first(amyloid_bl_cl20), .groups = "drop") %>%
+    filter(amy %in% TRUE) %>%
+    group_by(arm) %>% summarise(m = mean(slope, na.rm = TRUE), .groups = "drop") %>%
+    summarise(m = mean(m, na.rm = TRUE)) %>% pull(m)
+  designs %>% crossing(effect = effects) %>%
+    mutate(v = vt + (vsh + va / k_platforms) / sst,
+           reliability = vt / v,
+           n_per_arm = ceiling(2 * zsum2 * v / (effect * abs(m))^2),
+           singular = isSingular(fs), draw = b)
+}
+
+if (N_BOOT > 0) {
+# ---- draw 0: must reproduce R2a ----------------------------------------------------------
+est <- one_draw(0)
+R2a <- read_csv(file.path(REV_DIR, "R2a_trial_mean_of_platforms_bounds.csv"), show_col_types = FALSE) %>%
+  filter(biomarker == "pTau217", grepl("^lower", bound)) %>%
+  select(schedule, effect, n_R2a = n_per_arm_slope)
+chk <- est %>% left_join(R2a, by = c("schedule", "effect"))
+print(as.data.frame(chk %>% select(schedule, effect, n_per_arm, n_R2a)))
+stopifnot(all(abs(chk$n_per_arm - chk$n_R2a) <= 1))
+say("Draw 0 reproduces R2a. Starting %d bootstrap draws.", N_BOOT)
+
+# ---- bootstrap, resumable -------------------------------------------------------------------
+draws <- if (file.exists(draws_file)) readRDS(draws_file) else est
+done  <- unique(draws$draw)
+todo  <- setdiff(seq_len(N_BOOT), done)
+t0 <- Sys.time()
+for (i in seq_along(todo)) {
+  b <- todo[i]
+  r <- one_draw(b)
+  if (!is.null(r)) draws <- bind_rows(draws, r)
+  if (i == 3) say("Projected time for %d draws: %.0f minutes", length(todo),
+                  as.numeric(difftime(Sys.time(), t0, units = "mins")) / 3 * length(todo))
+  if (i %% 10 == 0 || i == length(todo)) { tmp <- paste0(draws_file, ".tmp"); saveRDS(draws, tmp); file.rename(tmp, draws_file); say("Saved %d of %d draws", i, length(todo)) }
+}
+
+# ---- intervals ----------------------------------------------------------------------------------
+boot <- draws %>% filter(draw > 0)
+ci <- boot %>% group_by(schedule, effect) %>%
+  summarise(n_draws = n(), pct_singular = round(100 * mean(singular), 1),
+            n_lo95 = quantile(n_per_arm, 0.025), n_hi95 = quantile(n_per_arm, 0.975),
+            rel_lo95 = quantile(reliability, 0.025), rel_hi95 = quantile(reliability, 0.975),
+            .groups = "drop")
+res <- est %>% select(schedule, effect, reliability, n_per_arm) %>%
+  left_join(ci, by = c("schedule", "effect"))
+write_csv(res, file.path(REV_DIR, "R17_trial_lower_bound_whole_cohort.csv"))
+say("\nWhole-cohort components, pTau217 mean of platforms lower bound (25%% slowing):")
+print(as.data.frame(res %>% filter(effect == 0.25) %>%
+                      transmute(schedule, n = sprintf("%s (%s to %s)", format(n_per_arm, big.mark = ",", trim = TRUE),
+                                                      format(round(n_lo95), big.mark = ",", trim = TRUE),
+                                                      format(round(n_hi95), big.mark = ",", trim = TRUE)),
+                                pct_singular)))
+say("Written: %s", file.path(REV_DIR, "R17_trial_lower_bound_whole_cohort.csv"))
+} else say("N_BOOT = 0: section 11 skipped.")

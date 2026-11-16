@@ -12,6 +12,7 @@
 #      refitted reliability and validity (combined/T9, T9b, F9; Figure 4C) (formerly 08b11)
 #   3. the line through baseline, week 240 and the extension sample against twelve-week variance, and the
 #      curvature of the mean trajectory (R8a, R8b) (formerly 08b17 R8)
+#   4. plasma samples per participant in the placebo arm and LEARN, and the median spans (R14a)
 # =============================================================================================
 
 
@@ -265,7 +266,7 @@ val <- bind_rows(lapply(MEASURES, function(m) {
       r = scor(blup_slope, crit_slope), .groups = "drop")) %>%
     mutate(unit = m_label[[m]]) }))
 # same sign convention as ADNI: positive means the plasma slope tracks worsening
-FLIP <- c("hcv_adj_slope", "mpacc_digit_slope", "mmse_slope")
+FLIP <- c("hcv_adj_slope", "mpacc_digit_slope", "pacc_slope", "mmse_slope")
 T5 <- val %>% select(unit, criterion, estimate, n, r) %>%
   mutate(r = round(ifelse(criterion %in% FLIP, -r, r), 3))
 print(as.data.frame(T5 %>% filter(criterion == "centiloid_slope")))
@@ -547,7 +548,7 @@ CONTRASTS <- list(
   `Placement: B against C (same window, middle sample moved)`  = c(2, 3))
 
 # Participant bootstrap of the three contrasts (added November 2026, so that the gains in
-# Table S13c carry intervals like every other estimate). Draw b resamples participants with
+# Table S23d carry intervals like every other estimate). Draw b resamples participants with
 # replacement (seed P2_SEED4 + b), gives each copy its own id so copies are separate clusters,
 # recomputes within the resample the predicted reliability (from the median SST), the refitted
 # reliability (the random-slope model of section 3) and the validity against Centiloid change
@@ -758,3 +759,30 @@ out(R8b, "R8b_a4_curvature_four_samples")
 say("The fourth sample falls after the double-blind period; check open-label treatment before")
 say("interpreting the placebo-arm rows as untreated.")
 
+
+
+# =============================================================================================
+# Section 4. Plasma samples per participant in A4/LEARN (R14a)
+# Added November 2026. The counts in the Methods (participants with one to four samples in the placebo arm
+# and LEARN, the number with three or more, and the median spans), which no other section writes out.
+# =============================================================================================
+Sys.setenv(COHORT = "a4learn"); source("00_setup.R")
+REV_DIR <- file.path(OUT_ROOT, "pipeline_out", "paper2")
+say("\n== Section 4. Plasma samples per participant (R14a) ==")
+a4_part <- readRDS(file.path(OUT_DIR, "participants.rds")) %>% distinct(RID, arm)
+a4_per <- readRDS(file.path(OUT_DIR, "frame_paper2_long.rds")) %>% filter(!is.na(plasma_time)) %>%
+  distinct(RID, plasma_time) %>% group_by(RID) %>%
+  summarise(k = n(), span = max(plasma_time) - min(plasma_time), .groups = "drop") %>%
+  left_join(a4_part, by = "RID")
+print(table(a4_per$arm, a4_per$k))
+prim <- a4_per %>% filter(arm %in% c("Placebo", "LEARN"))
+R14a <- tibble(
+  quantity = c(paste("placebo + LEARN, participants with", 1:4, "samples"), "placebo + LEARN, participants",
+               "placebo + LEARN, >=3 samples", "placebo + LEARN, >=3 samples, median span (y)",
+               "placebo + LEARN, 4 samples, median span (y)"),
+  value = c(sapply(1:4, function(j) sum(prim$k == j)), nrow(prim), sum(prim$k >= 3),
+            median(prim$span[prim$k >= 3]), median(prim$span[prim$k == 4])))
+print(as.data.frame(R14a %>% mutate(value = round(value, 2))))
+write_csv(R14a, file.path(REV_DIR, "R14a_a4learn_samples_per_participant.csv"))
+say("Written: R14a_a4learn_samples_per_participant.csv in %s", REV_DIR)
+Sys.setenv(COHORT = "adni")

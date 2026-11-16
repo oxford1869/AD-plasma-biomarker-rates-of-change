@@ -14,6 +14,8 @@
 #      (T21, F13; formerly 08b12)
 #   6. sample storage time: distribution, level regressed on storage years and the implied bias in the rate of
 #      change, slopes regressed on storage (R9a to R9c; formerly 08b18)
+#   7. hippocampal volume raw against ICV-adjusted: validity of the plasma slopes against each, with paired
+#      participant-resample intervals (R16)
 # =============================================================================================
 
 
@@ -662,7 +664,7 @@ BM     <- Sys.getenv("POWER_BM", "pTau217")
 NREP   <- as.integer(Sys.getenv("POWER_NREP", "200"))
 SEED   <- as.integer(Sys.getenv("POWER_SEED", "20260908"))
 # platform-specific slope SD as a fraction of the true between-person slope SD
-RATIOS <- as.numeric(strsplit(Sys.getenv("POWER_RATIOS", "0,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.6,0.8"), ",")[[1]])   # the grid of Table S17
+RATIOS <- as.numeric(strsplit(Sys.getenv("POWER_RATIOS", "0,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.6,0.8"), ",")[[1]])   # the grid of Table S8
 
 YVAR <- "z_log_aligned"
 long <- readRDS(file.path(OUT_DIR, "frame_paper2_long.rds")) %>%
@@ -927,3 +929,113 @@ say("differences in rate for each measure.")
 out(R9c, "R9c_slope_vs_storage")
 
 say("\n08b18 finished %s. Files in %s", format(Sys.time()), REV_DIR)
+
+
+# =============================================================================================
+# Section 7. Hippocampal volume, raw against ICV-adjusted (R16)
+# Added November 2026. The pipeline adjusts each scan by its own intracranial volume (ICV):
+# hcv_adj = hippocampus - 0.0017 x (ICV - 1,498,858), so visit-to-visit ICV variation enters the
+# hippocampal slope. For a rate of change a constant per-person adjustment cancels, so comparing the
+# raw hippocampal slope with the adjusted one isolates what the per-scan adjustment adds. Scans are
+# matched so both slopes use the same scan dates. The section
+#   1. rebuilds the hcv_adj, raw hippocampus and ICV slopes as 03 does (plasma span +/- 180 days,
+#      >= 2 assessments) and checks hcv_adj against the saved frame;
+#   2. counts participants whose MRI window spans September 2016 (the ICV step);
+#   3. recomputes validity (Spearman, sign reversed so positive = plasma slope tracks atrophy) for the
+#      pooled slope (T4b) and each single platform, for hcv_adj and raw hippocampus, and checks hcv_adj
+#      against T5;
+#   4. gives percentile 95% intervals from 2,000 participant resamples with the slopes held fixed, for
+#      each correlation and for raw minus adjusted (paired).
+# Reads saved frames and tables only; writes R16_hippocampus_raw_vs_icv.csv (Supplementary Methods).
+# =============================================================================================
+Sys.setenv(COHORT = "adni"); source("00_setup.R")
+P2_DIR <- file.path(OUT_DIR, "paper2")
+
+part   <- readRDS(file.path(OUT_DIR, "participants.rds"))
+crit   <- readRDS(file.path(OUT_DIR, "criteria_long.rds"))
+critr  <- readRDS(file.path(OUT_DIR, "frame_paper2_criteria.rds"))
+slopes <- readRDS(file.path(OUT_DIR, "frame_paper2_slopes.rds")) %>%
+  mutate(arm = case_when(measure == "C2N_plasma_ptau217_ratio" ~ "C2N_ratio", TRUE ~ platform)) %>%
+  select(RID, biomarker, arm, slope)
+pooled <- read_csv(file.path(P2_DIR, "T4b_pooled_person_slopes.csv"), show_col_types = FALSE) %>%
+  transmute(RID, biomarker, arm = "pooled", slope = pooled_slope)
+T5 <- read_csv(file.path(P2_DIR, "T5_validity_vs_criterion_change.csv"), show_col_types = FALSE) %>%
+  filter(criterion == "hcv_adj_slope")
+
+# ---- 1. Rebuild the MRI slopes as in 03 ---------------------------------------------------------
+span <- part %>% filter(in_core_5lab) %>% select(RID, first_plasma, last_plasma)
+mri <- crit %>%
+  filter(measure %in% c("hcv_adj", "hippocampus", "icv"), !is.na(value)) %>%
+  semi_join(crit %>% filter(measure == "hcv_adj", !is.na(value)) %>% distinct(RID, exam_date),
+            by = c("RID", "exam_date")) %>%           # same scans for every MRI measure
+  inner_join(span, by = "RID") %>%
+  filter(exam_date >= first_plasma - CRITERION_SLOPE_PAD_DAYS,
+         exam_date <= last_plasma  + CRITERION_SLOPE_PAD_DAYS) %>%
+  mutate(t = as.numeric(exam_date - first_plasma) / YEAR_DAYS)
+mri_sl <- slope_by(mri, "value", "t", RID, measure) %>%
+  select(RID, measure, slope, n_obs) %>%
+  pivot_wider(names_from = measure, values_from = c(slope, n_obs), names_glue = "{measure}_{.value}")
+
+chk <- mri_sl %>% select(RID, hcv_adj_slope) %>%
+  inner_join(critr %>% select(RID, hcv_saved = hcv_adj_slope), by = "RID")
+say("hcv_adj slope rebuilt for %d participants; max |difference| from the saved frame = %.2e",
+    sum(!is.na(chk$hcv_adj_slope)), max(abs(chk$hcv_adj_slope - chk$hcv_saved), na.rm = TRUE))
+stopifnot(max(abs(chk$hcv_adj_slope - chk$hcv_saved), na.rm = TRUE) < 1e-6,
+          sum(!is.na(chk$hcv_adj_slope)) == sum(!is.na(critr$hcv_adj_slope)))
+
+d <- mri_sl %>% filter(!is.na(hcv_adj_slope), !is.na(hippocampus_slope))
+say("Participants with both slopes: %d (manuscript 371)", nrow(d))
+say("Mean slope, mm3/year: hcv_adj %.1f, raw hippocampus %.1f, ICV %.1f",
+    mean(d$hcv_adj_slope), mean(d$hippocampus_slope), mean(d$icv_slope, na.rm = TRUE))
+say("SD of slope, mm3/year: hcv_adj %.1f, raw hippocampus %.1f, 0.0017 x ICV slope %.1f",
+    sd(d$hcv_adj_slope), sd(d$hippocampus_slope), sd(0.0017 * d$icv_slope, na.rm = TRUE))
+say("Spearman correlation of hcv_adj and raw hippocampal slopes: %.3f",
+    cor(d$hcv_adj_slope, d$hippocampus_slope, method = "spearman"))
+
+# ---- 2. MRI windows spanning September 2016 ------------------------------------------------------
+cut <- as.Date("2016-09-01")
+spanning <- mri %>% filter(measure == "icv") %>% group_by(RID) %>%
+  summarise(before = any(exam_date < cut), after = any(exam_date >= cut), .groups = "drop") %>%
+  filter(RID %in% d$RID)
+say("Of %d participants with an MRI slope, %d have scans both before and after September 2016",
+    nrow(spanning), sum(spanning$before & spanning$after))
+
+# ---- 3. Validity, hcv_adj against raw hippocampus -----------------------------------------------
+pl <- bind_rows(slopes, pooled)
+v <- pl %>% inner_join(d %>% select(RID, hcv_adj_slope, hippocampus_slope), by = "RID") %>%
+  filter(!is.na(slope))
+rho <- function(x, y) -cor(x, y, method = "spearman")      # reversed: positive = tracks atrophy
+obs <- v %>% group_by(biomarker, arm) %>%
+  summarise(n = n(), r_adj = rho(slope, hcv_adj_slope), r_raw = rho(slope, hippocampus_slope),
+            .groups = "drop") %>%
+  mutate(diff = r_raw - r_adj)
+cmp <- obs %>%
+  left_join(T5 %>% transmute(biomarker,
+                             arm = ifelse(estimate == "pooled", "pooled", arm), r_T5 = r, n_T5 = n),
+            by = c("biomarker", "arm"))
+say("\nhcv_adj validity rebuilt against T5 (r_adj should equal r_T5 to 3 decimals):")
+print(as.data.frame(cmp %>% mutate(across(c(r_adj, r_raw, diff), ~ round(.x, 3)))))
+stopifnot(!anyNA(cmp$r_T5), all(cmp$n == cmp$n_T5), all(abs(round(cmp$r_adj, 3) - cmp$r_T5) <= 0.0015))
+
+# ---- 4. Intervals: participant resamples, slopes held fixed ------------------------------------
+set.seed(20261112)
+B <- 2000
+ids <- unique(v$RID)
+boot <- lapply(seq_len(B), function(b) {
+  pick <- tibble(RID = sample(ids, length(ids), replace = TRUE))
+  pick %>% inner_join(v, by = "RID", relationship = "many-to-many") %>%
+    group_by(biomarker, arm) %>%
+    summarise(r_adj = rho(slope, hcv_adj_slope), r_raw = rho(slope, hippocampus_slope), .groups = "drop") %>%
+    mutate(diff = r_raw - r_adj, draw = b)
+}) %>% bind_rows()
+ci <- boot %>% group_by(biomarker, arm) %>%
+  summarise(across(c(r_adj, r_raw, diff),
+                   list(lo = ~ quantile(.x, 0.025, na.rm = TRUE), hi = ~ quantile(.x, 0.975, na.rm = TRUE))),
+            .groups = "drop")
+res <- obs %>% left_join(ci, by = c("biomarker", "arm")) %>%
+  select(biomarker, arm, n, r_adj, r_adj_lo, r_adj_hi, r_raw, r_raw_lo, r_raw_hi, diff, diff_lo, diff_hi) %>%
+  arrange(biomarker, arm != "pooled", arm)
+say("\nValidity against hippocampal change: ICV-adjusted (as reported) vs raw (positive = tracks atrophy)")
+print(as.data.frame(res %>% mutate(across(where(is.numeric) & !n, ~ round(.x, 2)))))
+write_csv(res, file.path(P2_DIR, "R16_hippocampus_raw_vs_icv.csv"))
+say("\nWritten: %s", file.path(P2_DIR, "R16_hippocampus_raw_vs_icv.csv"))

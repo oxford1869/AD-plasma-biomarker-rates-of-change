@@ -126,13 +126,13 @@ spaced draws over the median span was used here, 12.5 against 12.855; the bootst
 recomputes the median SST on each resample). The share of
 participants whose own slope exceeds the slope MDC is reported in each direction.
 
-*Agreement of slopes between platforms (T4, Figure S2, Table 2 ICC).* Pearson and Spearman
+*Agreement of slopes between platforms (T4, Figure S3, Table 2 ICC).* Pearson and Spearman
 correlations and tertile kappa for each pair of measures; the ICC of the per-participant
 slopes across measures from `slope ~ 1 + (1|participant) + (1|measure)`, single measure
 (ICC(2,1)) and mean of measures (ICC(2,k)). The pooled participant slope (T4b) is the fixed
 plus random slope for the participant from the change model.
 
-*Validity (T5, Figure S4).* Spearman correlation of each single-measure slope and of the
+*Validity (T5, Figure S6).* Spearman correlation of each single-measure slope and of the
 pooled slope with the participant's concurrent slope in Centiloid, CSF pTau181/Aβ42, MMSE,
 ADAS-Cog13, mPACC and adjusted hippocampal volume; the sign of hippocampal volume, mPACC and
 MMSE is reversed so that positive always means the plasma slope tracks worsening.
@@ -156,7 +156,7 @@ identifiability flag (needs three or more platforms and a non-singular fit): the
 reliability with the shared part retained, `var_true / (var_true + (var_shared +
 var_assay / k) / median_sst)`, and with all variation averaged.
 
-**Section 3 (R1, Table S10b inputs, Results).** The upper bound (T2) and the lower bound
+**Section 3 (R1, Table S17b inputs, Results).** The upper bound (T2) and the lower bound
 (T20: one platform `var_true / (var_true + (var_shared + var_assay) / median_sst)`; mean of
 platforms with the shared part retained) on the reliability gain from averaging, per
 biomarker, with the identifiability note.
@@ -190,7 +190,7 @@ participant means.
 
 ## Stage 6. Sampling design and trials (`06_sampling_design_and_trials.R`)
 
-**Section 1 (T15 to T17; Figure 4A; Tables S9, S10).**
+**Section 1 (T15 to T17; Figure 4A; Tables S16, S17).**
 
 *Trial sample size (T15).* Two-arm trial, plasma slope as endpoint, treatment slows the mean
 amyloid-positive rate by 25% or 50%; three schedules (18 months with 4 draws; 24 months with 3
@@ -210,21 +210,26 @@ The span needed for reliability 0.7, 0.8 and 0.9 with *k* evenly spaced draws:
 `sst_needed = ratio × target / (1 − target)` with `ratio = var_residual / var_true` (divided by
 the number of platforms for the mean), and `span = √(sst_needed × 12 (k − 1) / (k (k + 1)))`.
 
-*Validity by observed SST (T17, Table S14).* Participants' single-measure slopes against
+*Validity by observed SST (T17, Table S24).* Participants' single-measure slopes against
 concurrent Centiloid change, by quintile of observed SST, with the reliability the components
 predict at each quintile's median SST.
 
-**Section 2 (R2; Table S9b, S10).** The same trial-size and span calculations for the mean of
+**Section 2 (R2; Table S16b, S17).** The same trial-size and span calculations for the mean of
 platforms under both bounds: the upper bound exactly as T15; the lower bound from the sample
 model refitted unrounded, with error `var_shared + var_assay / k`. The upper rows are checked
 to reproduce T15.
 
-**Section 3 (R3; Figure 4B, Table S10, Results).** Trial sizes with the variance components
+**Section 3 (R3; Figure 4B, Table S17, Results).** Trial sizes with the variance components
 refitted in amyloid-positive participants only: the reduced model and the sample model per
 biomarker, and the per-platform T3 model, in amyloid-positive participants; fit diagnostics
 (singular, converged) are written (R3b). Per platform and for the mean of platforms under
 each bound, the same *n* formula with the amyloid-positive components, beside the
 whole-cohort T15 value.
+
+**Section 4 (R14b; Results).** The ratio of the lowest to the highest SST fifth in pTau217 validity
+against Centiloid change, predicted from both slopes' reliabilities: plasma from T2 at each fifth's
+median SST (as T17), Centiloid from a random-slope model of Centiloid in the criterion window at each
+fifth's median Centiloid SST, from participants' own scan times and from evenly spaced scans.
 
 ## Stage 7. A4/LEARN (`07_a4learn.R`)
 
@@ -232,15 +237,15 @@ whole-cohort T15 value.
 LEARN, all arms) and floor rule (as delivered; excluding always-at-floor): the random-slope
 change model on the Lilly pTau217 series, `y ~ t + (1 + t | participant)` for single-arm units and
 `y ~ arm * t + (1 + t | participant)` for the combined units (so the slope variance is within arm), var(true slope),
-residual, reliability at the unit's observed median SST (T2; Table S12). Baseline to week-12
+residual, reliability at the unit's observed median SST (T2; Table S22). Baseline to week-12
 test-retest in A4 (the short-interval pair): within-person SD and CV on the log scale, ICC(2,1),
 Bland-Altman limits, two-point MDC95, share of pairs beyond it, and the ratio of the long
 change model's residual variance to the 12-week residual variance (T7, F1; Results). Design
 test within participants with baseline, week-12 and week-240 draws: the least-squares slope
 from each subset of their own draws (baseline + week 12; baseline + week 240; week 12 + week
 240; all three), with the subset's median SST, predicted reliability, correlation with the
-three-draw slope and validity against Centiloid change (T8, F8; Table S13a); validity by
-observed SST band (T8b; Table S13b). MDC per unit on the z and fold scales (T3, T14); validity
+three-draw slope and validity against Centiloid change (T8, F8; Table S23b); validity by
+observed SST band (T8b; Table S23c). MDC per unit on the z and fold scales (T3, T14); validity
 of least-squares and BLUP slopes against Centiloid, PACC, MMSE, CDR-SB, tau PET and CSF change
 (T5); sampling requirement and span needed (T6, T16b, F3); participant bootstrap of the
 slope reliability per unit and of the 12-week test-retest ICC(2,1) and within-person CV, `N_BOOT`
@@ -257,7 +262,7 @@ reliability and validity, each with a 95% percentile interval from a participant
 the same participants: draw *b* resamples participants with replacement (seed `P2_SEED4` + *b*,
 default 20260908), each copy with its own id, and recomputes the three quantities per design on the
 resample; `P2_BOOT4` draws (default 1,000). Writes `combined/T9_fourth_sample.csv`,
-`T9b`, `F9` (Figure 4C, Table S13c).
+`T9b`, `F9` (Figure 4C, Table S23d).
 
 **Section 3 (R8; Results, Methods).** In the four-sample participants whose second sample is the week-12 draw (before 0.5 years), the signed
 residual of the line through samples 1, 3 and 4 (week 12 left out), scaled so its square is
@@ -268,20 +273,24 @@ arms (primary) and the placebo arm (R8a). Curvature of the mean trajectory: line
 quadratic fixed effect of time, random intercept and slope, ML, likelihood-ratio test and the
 quadratic coefficient with its interval (R8b).
 
+**Section 4 (R14a; Methods).** Plasma samples per participant in the placebo arm and LEARN (one
+to four), the number with three or more, and the median spans of those with three or more and with four.
+
 ## Stage 8. Sensitivity analyses (`08_sensitivity_analyses.R`, ADNI)
 
 | Section | Analysis | Writes |
 |---|---|---|
-| 1 | All fits in this section use the reduced change model (no platform-specific slope). *C2N floor* (the pTau217 model under five treatments of the lower-limit values: as delivered; excluding always-at-floor participants; excluding floor observations; half-floor substitution; cross-platform multiple imputation, each floor value drawn from below the limit using a regression on the same draw's ALZpath, Fujirebio and Janssen values, `N_IMP` = 10 imputations pooled). *Covariate adjustment*: the reduced model with age at first plasma (centred at 72), sex, APOE ε4 and diagnosis, each also interacting with time. *Scale robustness*: the change decomposition on the raw-scale z and on the baseline-standardised log scale. *Level agreement per platform pair* at each visit: mean log difference and limits of agreement, fold ratio, centred ICC (Figure S1). | T10, T10b, T11, T12, T13 |
+| 1 | All fits in this section use the reduced change model (no platform-specific slope). *C2N floor* (the pTau217 model under five treatments of the lower-limit values: as delivered; excluding always-at-floor participants; excluding floor observations; half-floor substitution; cross-platform multiple imputation, each floor value drawn from below the limit using a regression on the same draw's ALZpath, Fujirebio and Janssen values, `N_IMP` = 10 imputations pooled). *Covariate adjustment*: the reduced model with age at first plasma (centred at 72), sex, APOE ε4 and diagnosis, each also interacting with time. *Scale robustness*: the change decomposition on the raw-scale z and on the baseline-standardised log scale. *Level agreement per platform pair* at each visit: mean log difference and limits of agreement, fold ratio, centred ICC (Figure S2). | T10, T10b, T11, T12, T13 |
 | 2 | *C2N floor by amyloid status*: observations and participants at the floor by amyloid group (R5a); the two C2N readouts (concentration and %pTau217) refitted alone in three samples (all data; excluding floor draws; participants never at the floor) with reliability, MDC rise and fall, years to exceed, trial size (R5b); agreement of the two C2N slopes in the same three samples (R5c). | R5a, R5b, R5c |
 | 3 | *Latent-process harmonisation*, `lcmm::multlcmm`: per biomarker the platforms are measurements of one latent trajectory with platform-specific linear links and errors, participant latent intercept and slope; per-platform error SD on the latent scale (T8), latent participant slopes against the lme4 pooled and single-platform slopes (T8b), latent-scale reliability (T8c), link functions (F5). | T8, T8b, T8c, F5 |
 | 4 | *Multitrait-multimethod*, Roche and Quanterix block (pTau181, GFAP, NfL, Aβ42/40 on the same samples): level model `y ~ analyte * vendor + (1|participant) + (1|participant:analyte) + (1|participant:vendor) + (1|participant:analyte:vendor) + (1|participant:visit) + (1|participant:visit:vendor) + (1|batch)`; slope model `y ~ analyte * vendor * t + (1 + t || participant) + (1 + t || participant:analyte) + (1 + t || participant:vendor) + (1|participant:analyte:vendor) + (1|participant:visit) + (1|batch)`; the participant:vendor terms are the method factor; likelihood-ratio tests of the vendor terms. | T9, T9b, T9c |
-| 5 | *Power for a platform-specific slope variance*: data simulated from the reduced model's components for pTau217 on the real participants, times and platform structure, a platform-specific slope SD injected at 0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.6 and 0.8 of the true between-participant slope SD (0 to 0.64 of the variance), full and reduced models refitted, boundary-corrected likelihood-ratio test; power = share of `POWER_NREP` (200) replications rejecting at 0.05; the smallest ratio detectable with 80% power (Table S17, Figure S8). | T21, F13 |
-| 6 | *Storage time*: years from collection to assay (all assays January to March 2024) per sample (R9a); the standardised log value of the first sample regressed on storage years, adjusted for age at the sample, amyloid status and diagnosis, the coefficient being −d in SD units and the implied slope bias +d per year as a per cent of the mean annual rate (all and amyloid-positive), with 95% CIs for the coefficient and for the share of the amyloid-positive rate (R9b); slopes regressed on storage (R9c). Storage years is collinear with enrolment era and batch, so the coefficient bounds a bias rather than attributing it (Table S26). | R9a, R9b, R9c |
+| 5 | *Power for a platform-specific slope variance*: data simulated from the reduced model's components for pTau217 on the real participants, times and platform structure, a platform-specific slope SD injected at 0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.6 and 0.8 of the true between-participant slope SD (0 to 0.64 of the variance), full and reduced models refitted, boundary-corrected likelihood-ratio test; power = share of `POWER_NREP` (200) replications rejecting at 0.05; the smallest ratio detectable with 80% power (Table S8, Figure S4). | T21, F13 |
+| 6 | *Storage time*: years from collection to assay (all assays January to March 2024) per sample (R9a); the standardised log value of the first sample regressed on storage years, adjusted for age at the sample, amyloid status and diagnosis, the coefficient being −d in SD units and the implied slope bias +d per year as a per cent of the mean annual rate (all and amyloid-positive), with 95% CIs for the coefficient and for the share of the amyloid-positive rate (R9b); slopes regressed on storage (R9c). Storage years is collinear with enrolment era and batch, so the coefficient bounds a bias rather than attributing it (Table S14). | R9a, R9b, R9c |
+| 7 | *Hippocampal volume, raw against ICV-adjusted*: the pipeline adjusts each scan by its own intracranial volume (hcv_adj = hippocampus − 0.0017 × (ICV − 1,498,858)), so visit-to-visit ICV variation enters the slope. The hcv_adj, raw hippocampus and ICV slopes are rebuilt on the same scan dates as stage 3 (plasma span ± 180 days, ≥ 2 assessments; hcv_adj checked against the saved frame); participants whose MRI window spans September 2016 are counted; Spearman validity (sign reversed, positive = plasma slope tracks atrophy) of the pooled slope (T4b) and each single platform against both, hcv_adj checked against T5; percentile 95% intervals from 2,000 participant resamples with slopes held fixed, for each correlation and for raw minus adjusted (seed 20261112). Supplementary Methods. | R16 |
 
 ## Stage 9. The bootstrap and every interval (`09_bootstrap_intervals.R`, ADNI)
 
-**Section 1 (T2d, T2e, T2f, F4, T7; Table 2 intervals, Figure 2B, Table S25; the residual plots F4 become Figure S3 when stage 11 copies them).**
+**Section 1 (T2d, T2e, T2f, F4, T7; Table 2 intervals, Figure 2B, Table S26; the residual plots F4 become Figure S5 when stage 11 copies them).**
 *Likelihood-ratio test* of the platform-specific slope variance: the change model with and
 without `(t || participant:platform)`'s slope term, ML fits, statistic 2Δlog-likelihood,
 boundary-corrected p = 0.5 × P(χ²₁ > statistic); if p > 0.05 for every biomarker the reduced
@@ -297,7 +306,7 @@ always means the plasma slope tracks worsening. Every draw is appended to `boots
 resumes from it; T7 is the 2.5th and 97.5th percentiles over all saved draws (`n_draws`
 reported). `N_BOOT` default 1,000.
 
-**Section 2 (T3b, T15b; Table 3 and Table S10 intervals).** The same resamples and seeds.
+**Section 2 (T3b, T15b; Table 3 and Table S17 intervals).** The same resamples and seeds.
 Within each draw: the reduced change model per biomarker (var_true, residual), the per-platform
 T3 model (sem, mean rate), per-participant least-squares slopes, `sd_log` and the median span,
 all recomputed on the resample; then the two-point and slope MDC95 as per cent, years to exceed at
@@ -305,7 +314,7 @@ the amyloid-positive rate, within-person CV, amyloid-positive rate, share with a
 and the T15 slope-endpoint trial sizes for the 25% effect only. Cached in
 `mdc_bootstrap_draws.rds`; `P2_MDC_BOOT` default 1,000.
 
-**Section 3 (R10; Tables S9b, S10, S16c; Figures 2B and 4B).** The same resamples and seeds.
+**Section 3 (R10; Tables S16b, S17, S9b; Figures 2B and 4B).** The same resamples and seeds.
 Within each draw: B1 the pTau217 sample model (lower bound of averaging: one platform, mean of
 platforms with the shared part retained, and the spans needed for 0.7, 0.8, 0.9); B2 each of
 the 15 measures fitted alone at the ADNI and A4 SSTs; B3 trial sizes on amyloid-positive
@@ -313,12 +322,12 @@ components for every platform and for the mean of platforms under the upper boun
 pTau217 also under the lower bound, three schedules, two effects; B4 the immunoassay ICC. Draw 0 is the full data and must reproduce R1, R3a, R4 and
 R6. Singular draws are kept and their proportion reported. Cached in `R10_bootstrap_draws.rds`.
 
-**Section 4 (R11; Table S9b).** Intervals for the span needed, derived from the saved T7 draws
+**Section 4 (R11; Table S16b).** Intervals for the span needed, derived from the saved T7 draws
 without refitting: `ratio = (1 / rel_one − 1) × median_sst` (one platform) or
 `(1 / rel_mean − 1) × median_sst` (mean), then the span formula of stage 6; the point values
 must equal T16b, which is checked.
 
-**Section 5 (R12, R12b; Tables S10b, S16c; every head-to-head statement in the Results).**
+**Section 5 (R12, R12b; Tables S17b, S9b; every head-to-head statement in the Results).**
 Paired differences and ratios computed within each draw, so that comparisons have valid
 intervals: D1 trial sizes (mean of platforms under each bound minus Fujirebio; Roche minus
 Quanterix pTau181; ratios C2N %pTau217 / Fujirebio and Roche / Quanterix; GFAP and NfL pairs);
@@ -329,16 +338,16 @@ state which component sat at the boundary.
 
 **Section 6 (printed only).** The amyloid-positive minus amyloid-negative difference in pTau217
 validity against Centiloid change within each saved draw, 2.5th and 97.5th percentiles
-(Results; the construction of Table S25).
+(Results; the construction of Table S26).
 
-**Section 7 (T7c, T17p; A4 T8p, T8bp; Tables S13a, S13b, S14).** T7c: observed-data (not
+**Section 7 (T7c, T17p; A4 T8p, T8bp; Tables S23b, S23c, S24).** T7c: observed-data (not
 bootstrap) reliabilities and Spearman and Pearson validity of the pooled slope by amyloid group,
 the reduced change model refitted within each group as in the bootstrap, same six criteria and
 sign orientation; T17p: the ADNI validity
 by SST quintile with Pearson beside Spearman; T8p: the A4 within-participant design subsets with
 Pearson; T8bp: the A4 validity by SST band with Pearson.
 
-**Section 8 (R13a, R13b, R13c; Table 2 and Table S25 intervals, the paired comparisons in the
+**Section 8 (R13a, R13b, R13c; Table 2 and Table S26 intervals, the paired comparisons in the
 Results).** From the saved draws, without refitting: R13a from the main bootstrap, per biomarker,
 the gain from averaging (mean of platforms minus one platform), each biomarker's reliability minus
 pTau217's and Aβ42/40 minus NfL, and amyloid-positive minus amyloid-negative differences in the
@@ -347,6 +356,24 @@ differences in within-person CV, two-point and slope MDC and years to exceed, fo
 pair and for Roche against Quanterix; R13c the share of singular sample-model fits in the R10
 bootstrap. Percentile intervals over the 1,000 draws.
 
+**Section 9 (R15a; Results).** From the R10 draws, the percentage reduction in participants per arm when a
+24-month trial takes five samples instead of three (25% slowing, amyloid-positive components), per
+pTau217 measure and for the mean of platforms under both bounds; point estimates from R3a.
+
+**Section 10 (R15b; Results).** The pooled minus single-platform pTau217 Spearman correlation with Centiloid
+change, paired within the section 1 resamples: the pooled value from the cache, the single-platform
+value recomputed on the resample rebuilt from the same seed; draws 1 to 3 are checked against the
+cached slope ICC first, and the section stops if they differ.
+
+**Section 11 (R17; Table S17, whole-cohort column).** Intervals for the whole-cohort trial sizes of the
+pTau217 mean of platforms under the lower bound (point values R2a, stage 6 section 2). The same resamples
+and seeds as section 3; per draw the pTau217 sample model is refitted on the whole resample (true slope,
+shared occasion and assay-specific variance), the mean amyloid-positive rate is recomputed (mean over the
+five measures of the mean least-squares slope in amyloid-positive participants with three or more
+samples), and n per arm = ceiling(2 (z0.975 + z0.80)² v / (effect × |rate|)²) with v = var(true slope) +
+(var(shared) + var(assay-specific)/5) / SST of the schedule. Draw 0 must reproduce R2a. Saved every 10 draws
+in `R17_trial_lower_bound_whole_cohort_draws.rds` and resumed; skipped when `N_BOOT` = 0.
+
 ## Stage 10. Tables (`10_tables.R`)
 
 Section 1 (ADNI): Table 1 participant characteristics overall and by amyloid status at the
@@ -354,7 +381,7 @@ first plasma sample, including, for baseline-negative participants, conversion w
 period (first positive scan dated on or before the last five-platform plasma sample) and after it; Table 2 level components, G coefficient, slope components, slope
 reliability with intervals (all and by amyloid status), slope ICC, per biomarker; Table 3
 minimal detectable change per platform on the delivered scale; Table S1 assays (units,
-replicates, observations, % at the lower limit, batches, external QC CVs); Table S2 the
+replicates, observations, % at the lower limit, batches, external QC CVs); Table S15 the
 analytical share of the occasion-level variance (QC CV² / within-person CV²). Section 2:
 cross-cohort tables C1 design, C2 slope reliability with intervals, C3 the A4 12-week
 test-retest beside each cohort's change-model residual, C4 validity, C5 minimal detectable
@@ -369,7 +396,7 @@ components; slope reliability with upper-bound symbols, pTau217 lower-bound open
 R10, fitted-alone grey bands from R10), Figure 3 (slopes against the MDC band; years to exceed
 it), Figure 4 (reliability against SST with schedules; amyloid-positive trial sizes with
 intervals from R10, both bounds for the averaged pTau217 measure; the A4 four-sample test from
-`combined/T9`); Supplementary Figures S1 to S5; `manuscript_figure_legends.md`.
+`combined/T9`); Supplementary Figures S1 to S3, S5 and S6; `manuscript_figure_legends.md`.
 
 ---
 
@@ -379,9 +406,9 @@ intervals from R10, both bounds for the averaged pTau217 measure; the A4 four-sa
 10, 11. The dependencies that fix this order: 04 needs the frames (03); 05 and 06 need T2 and
 T3 (04); 06 section 2 needs T2, T3 (04) and T15 (06 section 1) and refits the sample model from the
 frames; 07 needs the A4 frames (02, 03) and, for sections 2 and 3, `frame_paper3_long` and
-`frame_paper3_person` (03); 08 needs T3, T4b (04) and T14 (05); 09 needs the frames of both
+`frame_paper3_person` (03); 08 needs T3, T4b, T5 (04), T14 (05) and, for section 7, `participants.rds` and `criteria_long.rds` (01); 09 needs the frames of both
 cohorts, T2 and T16b (04, 06), T14 (05, for a check), R1, R3a, R4, R6 (04, 06), its own T2d and
-the A4 T2 (07); 10 needs T7 (09) and both cohorts' tables; 11 needs R10 (09), `combined/T9` (07)
+the A4 T2 (07), and for section 11 R2a (06); 10 needs T7 (09) and both cohorts' tables; 11 needs R10 (09), `combined/T9` (07)
 and the frames. Every section
 re-sources `00_setup.R` and, where it matters, sets `COHORT`, so `OUT_DIR` always points at
 the right cohort's folder.
@@ -389,12 +416,12 @@ the right cohort's folder.
 ## Reproducibility notes
 
 - Seeds: ADNI participant bootstraps `20260904 + draw` in stage 9 sections 1 to 3, so the
-  three bootstraps use the same resamples and paired comparisons within a draw are valid;
+  three bootstraps, and section 11, use the same resamples and paired comparisons within a draw are valid;
   A4/LEARN bootstrap 20260906 (stage 7 section 1); R8 bootstrap 20261106 (stage 7 section 3); the cross-platform multiple imputation 20260904
-  (stage 8 section 1); the power simulation 20260908 (stage 8 section 5); the fourth-sample contrast bootstrap `20260908 + draw` (stage 7
+  (stage 8 section 1); the power simulation 20260908 (stage 8 section 5); the hippocampal resamples 20261112 (stage 8 section 7); the fourth-sample contrast bootstrap `20260908 + draw` (stage 7
   section 2, `P2_SEED4`). Stage 4 section 2 sets 20260907 (`P2_SEED`) but draws no random numbers as the code stands.
-- The cached draws (`bootstrap_draws.rds`, `mdc_bootstrap_draws.rds`, `R10_bootstrap_draws.rds`
-  in `pipeline_out/paper2/`) are resumed, not recomputed, if present; delete them to force a
+- The cached draws (`bootstrap_draws.rds`, `mdc_bootstrap_draws.rds`, `R10_bootstrap_draws.rds`,
+  `R17_trial_lower_bound_whole_cohort_draws.rds` in `pipeline_out/paper2/`) are resumed, not recomputed, if present; delete them to force a
   full recomputation.
 - Rounding: tables are written at full precision except where a script rounds for display
   (T3 percentages to one decimal, T4 and T5 correlations to three decimals in both cohorts, T19

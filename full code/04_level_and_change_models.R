@@ -316,7 +316,7 @@ val_pooled <- pooled %>%
   mutate(arm = "pooled across the five measures", estimate = "pooled")   # ADNI has no trial arms: the pooling is across the five pTau217 measures
 # Orient the signs so that a positive correlation always means the plasma slope tracks
 # worsening. Hippocampal volume, mPACC and MMSE fall as disease progresses, so their raw
-# correlations carry the opposite sign. Figure S4 already applied this flip (08b7 line 252)
+# correlations carry the opposite sign. Figure S6 already applied this flip (08b7 line 252)
 # while the table did not, so the table and its own note disagreed.
 FLIP <- c("hcv_adj_slope", "mpacc_digit_slope", "mmse_slope")
 validity <- bind_rows(val_single, val_pooled) %>%

@@ -213,12 +213,12 @@ QC_CV <- tribble(
                                  is.na(cv_low) ~ sprintf("%.1f (high control only)", cv_high),
                                  TRUE ~ sprintf("%.1f / %.1f", cv_high, cv_low)))
 
-# ---- Table S2: analytical share of the occasion-level variance ------------------------------------
+# ---- Table S15: analytical share of the occasion-level variance ------------------------------------
 # Within-person CV (Table 3) is everything about one measurement that is not the
 # participant's linear trajectory. On the log scale variances add, so the share
 # attributable to the assay itself is (analytical CV / within-person CV)^2, with
 # the remainder pre-analytical, short-term biological and non-linearity.
-say("Table S2")
+say("Table S15")
 T14 <- rd("T14_mdc_fold_change")
 ts2 <- T14 %>% select(biomarker, arm, measure, cv_within_pct) %>%
   left_join(QC_CV, by = "measure") %>%
@@ -233,7 +233,7 @@ ts2 <- T14 %>% select(biomarker, arm, measure, cv_within_pct) %>%
             `Within-person CV, %` = f0(cv_within_pct),
             `Non-analytical CV, %` = f0(cv_other),
             `Analytical share of occasion variance, %` = f0(share_analytical))
-print(as.data.frame(ts2)); out(ts2, "TableS2_analytical_share")
+print(as.data.frame(ts2)); out(ts2, "TableS15_analytical_share")
 
 # ---- Supplementary Table S1: assays --------------------------------------------------------------
 say("Table S1")
@@ -266,7 +266,7 @@ writeLines(c(sprintf("# Paper 2 tables (pipeline %s)", PIPELINE_VERSION), "",
              md_table(t2w, "Table 2. Sources of variance and reliability per biomarker"),
              md_table(t3, "Table 3. Minimal detectable change per platform on the delivered scale"),
              md_table(ts1, "Table S1. Assays"),
-             md_table(ts2, "Table S2. Analytical share of the occasion-level variance")),
+             md_table(ts2, "Table S15. Analytical share of the occasion-level variance")),
            file.path(TAB_DIR, "tables_paper2.md"))
 say("\nTables written to %s", TAB_DIR)
 
